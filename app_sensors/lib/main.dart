@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_sensors/flutter_sensors.dart';
+import 'package:socket_io/socket_io.dart';
 
 void main() => runApp(const MyApp());
 
@@ -23,8 +24,9 @@ class _MyAppState extends State<MyApp> {
   List<double> _gyroData = List.filled(3, 0.0);
   StreamSubscription? _accelSubscription;
   StreamSubscription? _gyroSubscription;
-  final StreamController<String> _dataStreamController =
-      StreamController<String>();
+  // final StreamController<String> _dataStreamController =
+  // StreamController<String>();
+  final server = Server();
 
   @override
   void initState() {
@@ -79,27 +81,66 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  void startSendingData() async {
-    final socket = await Socket.connect('localhost', 8090);
-    _dataStreamController.stream.listen((data) {
-      socket.write(json.encode({'data': data}));
-      socket.flush();
-    });
-    Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      _dataStreamController.add(json.encode({
-        'accelX': _accelData[0],
-        'accelY': _accelData[1],
-        'accelZ': _accelData[2],
-        'gyroX': _gyroData[0],
-        'gyroY': _gyroData[1],
-        'gyroZ': _gyroData[2]
-      }));
-    });
-  }
+  // void startServer() async {
+  //   final ip = InternetAddress.anyIPv4;
+  //   final server = await ServerSocket.bind(ip, 8090);
+  //   print("Server in running on ${ip.address}:${server.port}");
+  //   server.listen((Socket event) {
+  //     handleConnection(event);
+  //   });
+  // }
 
-  void stopSendingData() {
-    _dataStreamController.close();
-  }
+  // void handleConnection(Socket client) {
+  //   client.listen((Uint8List data) {
+  //     final message = String.fromCharCodes(data);
+  //     client.add(client);
+  //     client.write("Server: You are logged in as: $message");
+  //   }, onError: (error) {
+  //     printRed(error);
+  //     client.close()
+  //   },
+  //   onDone:(){
+  //     printWarening("Server: Client left");
+  //     client.close();
+  //   });
+  // }
+
+  // void startServer() async {
+  //   server.listen(8090);
+  //   server.on('connection', (client) {
+  //     print('Connection to $client');
+
+  //     client.on('stream', (data) {
+  //       print('Data from client: $data');
+  //     });
+
+  //     Timer(Duration(seconds: 5), () {
+  //       client.emit('msg', 'Hello from server');
+  //     });
+  //   });
+  //   server.listen(8090);
+  // }
+  // void startSendingData() async {
+  //   final socket = await Socket.connect('localhost', 8090);
+  //   _dataStreamController.stream.listen((data) {
+  //     socket.write(json.encode({'data': data}));
+  //     socket.flush();
+  //   });
+  //   Timer.periodic(const Duration(milliseconds: 100), (timer) {
+  //     _dataStreamController.add(json.encode({
+  //       'accelX': _accelData[0],
+  //       'accelY': _accelData[1],
+  //       'accelZ': _accelData[2],
+  //       'gyroX': _gyroData[0],
+  //       'gyroY': _gyroData[1],
+  //       'gyroZ': _gyroData[2]
+  //     }));
+  //   });
+  // }
+
+  // void stopSendingData() {
+  //   _dataStreamController.close();
+  // }
 
   Future<void> _startGyroscope() async {
     if (_gyroSubscription != null) return;
@@ -219,18 +260,18 @@ class _MyAppState extends State<MyApp> {
                   ),
                 ],
               ),
-              const Padding(padding: EdgeInsets.only(top: 16.0)),
-              MaterialButton(
-                color: Colors.green,
-                onPressed: () => startSendingData(),
-                child: const Text("Send Data"),
-              ),
-              const Padding(padding: EdgeInsets.only(top: 16.0)),
-              MaterialButton(
-                color: Colors.red,
-                onPressed: () => stopSendingData(),
-                child: const Text("Stop Data"),
-              ),
+              // const Padding(padding: EdgeInsets.only(top: 16.0)),
+              // MaterialButton(
+              //   color: Colors.green,
+              //   onPressed: () => startServer(),
+              //   child: const Text("Start Server"),
+              // ),
+              // const Padding(padding: EdgeInsets.only(top: 16.0)),
+              // MaterialButton(
+              //   color: Colors.red,
+              //   onPressed: () => stopSendingData(),
+              //   child: const Text("Stop Data"),
+              // ),
             ],
           ),
         ),

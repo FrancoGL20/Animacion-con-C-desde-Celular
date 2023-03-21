@@ -38,6 +38,8 @@ dependencies:
   flutter_sensors: ^1.0.1
   http: ^0.13.5
   web_socket_channel: ^2.3.0
+  socket_io: ^1.0.1
+  socket_io_client: ^1.0.2
 
 dev_dependencies:
   flutter_test:
