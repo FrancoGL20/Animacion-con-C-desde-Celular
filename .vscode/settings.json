@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "*.cpp": "cpp",
+        "*.c": "c",
+        "*.py": "python",
+        "socket.h": "c"
+    }
+}
