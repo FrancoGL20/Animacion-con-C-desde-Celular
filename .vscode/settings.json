@@ -3,6 +3,8 @@
         "*.cpp": "cpp",
         "*.c": "c",
         "*.py": "python",
-        "socket.h": "c"
+        "socket.h": "c",
+        "unistd.h": "c",
+        "ostream": "c"
     }
 }

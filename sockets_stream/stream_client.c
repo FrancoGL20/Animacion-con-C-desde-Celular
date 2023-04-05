@@ -73,12 +73,3 @@ int main(int argc, char *argv[])
     freehostent(hp);
     exit(0);
 }
-
-// How to use this program:
-// 1. Compile stream_server.c and stream_client.c.
-// 2. Run stream_server.
-// 3. Run stream_client with the host name and port number of the
-//    server as arguments.
-// Example
-// 4. The client will send some data to the server, which will
-//    print it out.

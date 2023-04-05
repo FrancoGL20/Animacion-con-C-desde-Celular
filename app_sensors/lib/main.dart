@@ -6,8 +6,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_sensors/flutter_sensors.dart';
 
-
-
 void main() => runApp(const MyApp());
 
 class MyApp extends StatefulWidget {
@@ -27,6 +25,7 @@ class _MyAppState extends State<MyApp> {
   StreamSubscription? _gyroSubscription;
   final StreamController<String> _dataStreamController =
       StreamController<String>();
+
 
   @override
   void initState() {
@@ -82,7 +81,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   void startSendingData() async {
-    final socket = await Socket.connect('localhost', 8090);
+    final socket = await Socket.connect("192.168.10.144", 50342);
     _dataStreamController.stream.listen((data) {
       socket.write(json.encode({'data': data}));
       socket.flush();
@@ -225,7 +224,7 @@ class _MyAppState extends State<MyApp> {
               MaterialButton(
                 color: Colors.green,
                 onPressed: () => startSendingData(),
-                child: const Text("Send Data"),
+                child: const Text("Start Sending Data"),
               ),
               const Padding(padding: EdgeInsets.only(top: 16.0)),
               MaterialButton(
