@@ -26,7 +26,6 @@ class _MyAppState extends State<MyApp> {
   final StreamController<String> _dataStreamController =
       StreamController<String>();
 
-
   @override
   void initState() {
     _checkAccelerometerStatus();
@@ -81,19 +80,20 @@ class _MyAppState extends State<MyApp> {
   }
 
   void startSendingData() async {
-    final socket = await Socket.connect("192.168.10.144", 50342);
+    final socket = await Socket.connect("192.168.10.144", 11510);
     _dataStreamController.stream.listen((data) {
-      socket.write(json.encode({'data': data}));
+      socket.write({'data': data});
       socket.flush();
     });
-    Timer.periodic(const Duration(milliseconds: 100), (timer) {
+    Timer.periodic(const Duration(milliseconds: 5000), (timer) {
       _dataStreamController.add(json.encode({
         'accelX': _accelData[0],
         'accelY': _accelData[1],
-        'accelZ': _accelData[2],
-        'gyroX': _gyroData[0],
-        'gyroY': _gyroData[1],
-        'gyroZ': _gyroData[2]
+        'accelZ': _accelData[2]
+
+        // 'gyroX': _gyroData[0],
+        // 'gyroY': _gyroData[1],
+        // 'gyroZ': _gyroData[2]
       }));
     });
   }
@@ -230,12 +230,13 @@ class _MyAppState extends State<MyApp> {
               MaterialButton(
                 color: Colors.red,
                 onPressed: () => stopSendingData(),
-                child: const Text("Stop Data"),
+                child: const Text("Stop Sending Data"),
               ),
             ],
           ),
         ),
       ),
+      debugShowCheckedModeBanner: false, // ? Remove debug banner from top right
     );
   }
 }
