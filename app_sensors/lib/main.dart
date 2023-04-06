@@ -85,7 +85,7 @@ class _MyAppState extends State<MyApp> {
       socket.write({'data': data});
       socket.flush();
     });
-    Timer.periodic(const Duration(milliseconds: 5000), (timer) {
+    Timer.periodic(const Duration(milliseconds: 140), (timer) {
       _dataStreamController.add(json.encode({
         'accelX': _accelData[0],
         'accelY': _accelData[1],

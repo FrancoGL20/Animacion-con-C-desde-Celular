@@ -27,9 +27,58 @@ GLboolean malla = GL_FALSE, ejes = GL_TRUE;
 GLfloat rojo[3] = {0.9, 0.0, 0.0};
 GLfloat negro[3] = {0.0, 0.0, 0.0};
 GLfloat azul[3] = {0, 0, 1};
-
 GLboolean iniciando = GL_TRUE;
 float giro = 0;
+float gyroX;
+float gyroY;
+float gyroZ;
+
+void parseString(char *text)
+{
+    char *pattern = ":(-?[0-9]+[.][0-9]+).*:([-]?[0-9]+[.][0-9]+).*:(-?[0-9]+[.][0-9]+)";
+
+    //  {data:{"gyroX":0.005093295592814684,"gyroY":-0.0009986853692680597,"gyroZ":0.0009321063989773393}}
+    // char *text = "{data:{\"gyroX\":-0.005093295592814684,\"gyroY\":-0.0009986853692680597,\"gyroZ\":-0.0009321063989773393}}";
+
+    // Compile la expresión regular
+    regex_t regex;
+    int ret = regcomp(&regex, pattern, REG_EXTENDED);
+    if (ret)
+    {
+        printf("No se pudo compilar la expresión regular.\n");
+        exit(1);
+    }
+
+    // Busque la primera coincidencia
+    regmatch_t matches[4];
+    ret = regexec(&regex, text, 4, matches, 0);
+    if (ret == 0)
+    {
+        // Obtenga las coincidencias y guárdelas en variables independientes
+        char n1[100];
+        char n2[100];
+        char n3[100];
+        strncpy(n1, text + matches[1].rm_so, matches[1].rm_eo - matches[1].rm_so);
+        strncpy(n2, text + matches[2].rm_so, matches[2].rm_eo - matches[2].rm_so);
+        strncpy(n3, text + matches[3].rm_so, matches[3].rm_eo - matches[3].rm_so);
+        n1[matches[1].rm_eo - matches[1].rm_so] = '\0';
+        n2[matches[2].rm_eo - matches[2].rm_so] = '\0';
+        n3[matches[3].rm_eo - matches[3].rm_so] = '\0';
+
+        // parseo de string a float
+        gyroX = atof(n1);
+        gyroY = atof(n2);
+        gyroZ = atof(n3);
+
+        // Imprima las coincidencias
+        // printf("\ngyroX: %f\n", gyroX);
+        // printf("gyroY: %f\n", gyroY);
+        // printf("gyroZ: %f\n\n", gyroZ);
+    }
+
+    // Libere la memoria
+    regfree(&regex);
+}
 
 // Rotacion XY y Zoom
 void mover(void)
@@ -103,7 +152,8 @@ void dibuja(void)
     char mensaje[30] = "Deje la estufa encendida!!!";
 
     glPushMatrix();
-    mover();
+    glRotatef(giray, 0.0, 1.0, 0.0);
+    glRotatef(girax, 1.0, 0.0, 0.0);
     if (malla)
         creaMalla(10);
     if (ejes)
@@ -720,6 +770,31 @@ void dibuja(void)
 // Función de animación
 void anima(int v)
 {
+    // leer el contenido de un archivo y guardarlo en un string
+    FILE *fp;
+    float xg,yg,zg;
+    fp = fopen("data.json", "r");
+
+    char texto[200];
+    fscanf(fp, "%[^\n]+", texto);
+    if (fp != NULL) {
+        parseString(texto);
+    }
+    fclose(fp);
+
+    // girax = 0, giray = 0;
+
+    // float gyroX; 
+    // float gyroY; // controlar el giro en y
+    // float gyroZ; // controla el giro en x
+    
+    gyroY=-gyroY; // Arreglar posibles confusiones //! Acelerometro
+    
+    // Cambiar el rango desde -1->1 a -180->180
+    giray = gyroX * 90; //! Acelerometro
+    girax = gyroY * 90; //! Acelerometro
+
+    
     if (iniciando)
     {
         if (giro < 180)
@@ -768,21 +843,21 @@ void teclado(unsigned char key, int x, int y)
 // Funciones con Teclas Especiales
 void rotar(int key, int x, int y)
 {
-    switch (key)
-    {
-    case GLUT_KEY_LEFT: // rotacion en el eje Y
-        giray -= 15;
-        break;
-    case GLUT_KEY_RIGHT: // rotacion en el eje Y
-        giray += 15;
-        break;
-    case GLUT_KEY_UP: // rotacion en el eje X
-        girax -= 15;
-        break;
-    case GLUT_KEY_DOWN: // rotacion en el eje X
-        girax += 15;
-        break;
-    }
+    // switch (key)
+    // {
+    // case GLUT_KEY_LEFT: // rotacion en el eje Y
+    //     giray -= 15;
+    //     break;
+    // case GLUT_KEY_RIGHT: // rotacion en el eje Y
+    //     giray += 15;
+    //     break;
+    // case GLUT_KEY_UP: // rotacion en el eje X
+    //     girax -= 15;
+    //     break;
+    // case GLUT_KEY_DOWN: // rotacion en el eje X
+    //     girax += 15;
+    //     break;
+    // }
     glutPostRedisplay();
 }
 
@@ -811,7 +886,7 @@ int main(int argc, char **argv)
     float x = 800;
     glutInitWindowSize(x * (3 / 2), x); // Relacion 3:2
     glutInit(&argc, argv);
-    glutCreateWindow("Francisco GL");
+    glutCreateWindow("Investigación");
     glutDisplayFunc(dibuja);
     glutReshapeFunc(ajusta);
     glutKeyboardFunc(teclado);
