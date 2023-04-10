@@ -172,6 +172,15 @@ void dibuja(void)
     { // Torso
         glPushMatrix();
 
+        // Cuello
+        glPushMatrix();
+            glColor3fv(rojo);
+            glTranslatef(0.0, 4.0, 0.0);
+            glScalef(0.4, 0.8, 0.4);
+            glRotatef(-90, 1.0, 0.0, 0.0);
+            gluCylinder(gluNewQuadric(), 1.5, 1.0, 1.0, 20, 20); // base, top, height, slices, stacks
+        glPopMatrix();
+
         // Parte superior2 (torso)
         glPushMatrix();
         glColor3fv(rojo);
@@ -348,7 +357,7 @@ void dibuja(void)
 
     { // Cabeza
         glPushMatrix();
-        glTranslatef(0.0, 6.0, 0.0);
+        glTranslatef(0.0, 5.85, 0.0);
 
         // Cabeza
         glPushMatrix();
