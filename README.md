@@ -121,6 +121,7 @@ flutter run
 
 * Flutter
   * sensores
+  
     ![alt text](https://i.postimg.cc/2ycXD1DF/Screen-Shot-2023-04-12-at-1-49-13-p-m.png)
 
 * Codigos de C
@@ -160,15 +161,8 @@ final socket = await Socket.connect("10.104.85.35", 11510);
 
 ## Video demostración
 
-<iframe
-    width="640"
-    height="480"
-    src="https://www.youtube.com/watch?v=0tyqM-I_Pr8"
-    frameborder="0"
-    allow="autoplay; encrypted-media"
-    allowfullscreen
->
-</iframe>
+[![Animación con C controlada desde celular](https://i.postimg.cc/xTyfg90f/Screenshot-2023-04-12-at-3-11-52-p-m.png)](https://www.youtube.com/watch?v=0tyqM-I_Pr8)
+[Link del video](https://www.youtube.com/watch?v=0tyqM-I_Pr8)
 
 ## Referencias
 
