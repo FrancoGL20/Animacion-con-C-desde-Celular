@@ -80,7 +80,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   void startSendingData() async {
-    final socket = await Socket.connect("192.168.10.144", 11510);
+    final socket = await Socket.connect("10.104.76.78", 11510);
     _dataStreamController.stream.listen((data) {
       socket.write({'data': data});
       socket.flush();
@@ -133,6 +133,7 @@ class _MyAppState extends State<MyApp> {
           alignment: AlignmentDirectional.topCenter,
           child: Column(
             children: <Widget>[
+              const Padding(padding: EdgeInsets.only(top: 130.0)),
               const Text(
                 "Accelerometer Test",
                 textAlign: TextAlign.center,
@@ -178,48 +179,48 @@ class _MyAppState extends State<MyApp> {
                 ],
               ),
               const Padding(padding: EdgeInsets.only(top: 16.0)),
-              const Text(
-                "Gyroscope Test",
-                textAlign: TextAlign.center,
-              ),
-              Text(
-                "Gyroscope Enabled: $_gyroAvailable",
-                textAlign: TextAlign.center,
-              ),
-              const Padding(padding: EdgeInsets.only(top: 16.0)),
-              Text(
-                "[0](X) = ${_gyroData[0]}",
-                textAlign: TextAlign.center,
-              ),
-              const Padding(padding: EdgeInsets.only(top: 16.0)),
-              Text(
-                "[1](Y) = ${_gyroData[1]}",
-                textAlign: TextAlign.center,
-              ),
-              const Padding(padding: EdgeInsets.only(top: 16.0)),
-              Text(
-                "[2](Z) = ${_gyroData[2]}",
-                textAlign: TextAlign.center,
-              ),
-              const Padding(padding: EdgeInsets.only(top: 16.0)),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  MaterialButton(
-                    color: Colors.green,
-                    onPressed: _gyroAvailable ? () => _startGyroscope() : null,
-                    child: const Text("Start"),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.all(8.0),
-                  ),
-                  MaterialButton(
-                    color: Colors.red,
-                    onPressed: _gyroAvailable ? () => _stopGyroscope() : null,
-                    child: const Text("Stop"),
-                  ),
-                ],
-              ),
+              // const Text(
+              //   "Gyroscope Test",
+              //   textAlign: TextAlign.center,
+              // ),
+              // Text(
+              //   "Gyroscope Enabled: $_gyroAvailable",
+              //   textAlign: TextAlign.center,
+              // ),
+              // const Padding(padding: EdgeInsets.only(top: 16.0)),
+              // Text(
+              //   "[0](X) = ${_gyroData[0]}",
+              //   textAlign: TextAlign.center,
+              // ),
+              // const Padding(padding: EdgeInsets.only(top: 16.0)),
+              // Text(
+              //   "[1](Y) = ${_gyroData[1]}",
+              //   textAlign: TextAlign.center,
+              // ),
+              // const Padding(padding: EdgeInsets.only(top: 16.0)),
+              // Text(
+              //   "[2](Z) = ${_gyroData[2]}",
+              //   textAlign: TextAlign.center,
+              // ),
+              // const Padding(padding: EdgeInsets.only(top: 16.0)),
+              // Row(
+              //   mainAxisAlignment: MainAxisAlignment.center,
+              //   children: <Widget>[
+              //     MaterialButton(
+              //       color: Colors.green,
+              //       onPressed: _gyroAvailable ? () => _startGyroscope() : null,
+              //       child: const Text("Start"),
+              //     ),
+              //     const Padding(
+              //       padding: EdgeInsets.all(8.0),
+              //     ),
+              //     MaterialButton(
+              //       color: Colors.red,
+              //       onPressed: _gyroAvailable ? () => _stopGyroscope() : null,
+              //       child: const Text("Stop"),
+              //     ),
+              //   ],
+              // ),
               const Padding(padding: EdgeInsets.only(top: 16.0)),
               MaterialButton(
                 color: Colors.green,

@@ -78,7 +78,7 @@ int main()
                 else
                 {
                     /* assumes the data is printable */
-                    // printf("-->%s\n", buf); // !! IMPORTANTE
+                    printf("-->%s\n", buf); // !! IMPORTANTE
                     
                     // Escribir en un archivo el contenido del string buf, si el archivo no existe, crearlo, si existe, sobreescribirlo
                     FILE *fp;
