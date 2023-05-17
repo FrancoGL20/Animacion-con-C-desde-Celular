@@ -20,6 +20,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <regex.h>
+#include <sys/time.h>
+#include <time.h>
 
 // Variables globales
 GLfloat girax = 0, giray = 0;
@@ -33,6 +35,267 @@ float giro = 0;
 float gyroX;
 float gyroY;
 float gyroZ;
+float posy_global = 0;
+
+#define PS_GRAVITY -9.8
+#define PS_WATERFALL 0
+#define PS_FOUNTAIN 1
+
+typedef struct
+{
+    float x, y, z;
+    float radius;
+} PSsphere;
+
+typedef struct
+{
+    float position[3]; /* current position */
+    float previous[3]; /* previous position */
+    float velocity[3]; /* velocity (magnitude & direction) */
+    float dampening;   /* % of energy lost on collision */
+    int alive;         /* is this particle alive? */
+} PSparticle;
+
+float pub_tam_cab_ar, pub_dist_cab, pub_tam_cab_ab;
+PSparticle *particles = NULL;
+PSsphere sphere = {0.0, 5.85, 0.0, 1.2};
+PSsphere sphere2;
+
+int num_particles = 5000;
+int type = PS_WATERFALL;
+int points = 1;
+int do_sphere = 0;
+int frame_rate = 1;
+float frame_time = 0;
+float flow = 500;
+float slow_down = 1;
+
+float spin_x = 0;
+float spin_y = 0;
+int point_size = 3;
+
+float timedelta(void)
+{
+    static long begin = 0;
+    static long finish, difference;
+
+#if defined(_WIN32)
+#include <sys/timeb.h>
+    static struct timeb tb;
+
+    ftime(&tb);
+    finish = tb.time * 1000 + tb.millitm;
+#else
+#include <limits.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/times.h>
+    static struct tms tb;
+
+    finish = times(&tb);
+#endif
+
+    difference = finish - begin;
+    begin = finish;
+
+    return (float)difference / (float)100; /* CLK_TCK=1000 */
+}
+
+void text(int x, int y, char *s)
+{
+    int lines;
+    char *p;
+
+    glDisable(GL_DEPTH_TEST);
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho(0, glutGet(GLUT_WINDOW_WIDTH),
+            0, glutGet(GLUT_WINDOW_HEIGHT), -1, 1);
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+    glColor3ub(0, 0, 0);
+    glRasterPos2i(x + 1, y - 1);
+    for (p = s, lines = 0; *p; p++)
+    {
+        if (*p == '\n')
+        {
+            lines++;
+            glRasterPos2i(x + 1, y - 1 - (lines * 18));
+        }
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *p);
+    }
+    glColor3ub(128, 0, 255);
+    glRasterPos2i(x, y);
+    for (p = s, lines = 0; *p; p++)
+    {
+        if (*p == '\n')
+        {
+            lines++;
+            glRasterPos2i(x, y - (lines * 18));
+        }
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *p);
+    }
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+    glEnable(GL_DEPTH_TEST);
+}
+
+int fequal(float a, float b)
+{
+    float epsilon = 0.1;
+    float f = a - b;
+
+    if (f < epsilon && f > -epsilon)
+        return 1;
+    else
+        return 0;
+}
+
+void psTimeStep(PSparticle *p, float dt)
+{
+    if (p->alive == 0)
+        return;
+
+    p->velocity[0] += 0;
+    p->velocity[1] += PS_GRAVITY * dt;
+    p->velocity[2] += 0;
+
+    p->previous[0] = p->position[0];
+    p->previous[1] = p->position[1];
+    p->previous[2] = p->position[2];
+
+    p->position[0] += p->velocity[0] * dt;
+    p->position[1] += p->velocity[1] * dt;
+    p->position[2] += p->velocity[2] * dt;
+}
+
+void psNewParticle(PSparticle *p, float dt, float x, float y)
+{
+    if (type == PS_WATERFALL)
+    {
+        p->velocity[0] = 1 * (drand48() - 0.5);
+        p->velocity[1] = 0;
+        p->velocity[2] = 0.5 * (drand48() - 0.0);
+        p->position[0] = x;
+        p->position[1] = y;
+        p->position[2] = 0;
+        p->previous[0] = p->position[0];
+        p->previous[1] = p->position[1];
+        p->previous[2] = p->position[2];
+        p->dampening = 0.45 * drand48();
+        p->alive = 1;
+    }
+    else if (type == PS_FOUNTAIN)
+    {
+        p->velocity[0] = 2 * (drand48() - 0.5);
+        p->velocity[1] = 6;
+        p->velocity[2] = 2 * (drand48() - 0.5);
+        p->position[0] = 0;
+        p->position[1] = 0;
+        p->position[2] = 0;
+        p->previous[0] = p->position[0];
+        p->previous[1] = p->position[1];
+        p->previous[2] = p->position[2];
+        p->dampening = 0.35 * drand48();
+        p->alive = 1;
+    }
+
+    psTimeStep(p, 2 * dt * drand48());
+}
+
+void psBounce(PSparticle *p, float dt)
+{
+    float s;
+
+    if (p->alive == 0)
+        return;
+
+    /* since we know it is the ground plane, we only need to
+       calculate s for a single dimension. */
+    s = -p->previous[1] / p->velocity[1];
+
+    p->position[0] = (p->previous[0] + p->velocity[0] * s +
+                      p->velocity[0] * (dt - s) * p->dampening);
+    p->position[1] = -p->velocity[1] * (dt - s) * p->dampening; /* reflect */
+    p->position[2] = (p->previous[2] + p->velocity[2] * s +
+                      p->velocity[2] * (dt - s) * p->dampening);
+
+    /* damp the reflected velocity (since the particle hit something,
+       it lost some energy) */
+    p->velocity[0] *= p->dampening;
+    p->velocity[1] *= -p->dampening; /* reflect */
+    p->velocity[2] *= p->dampening;
+}
+
+void psCollide(PSparticle *p)
+{
+    float vx = p->position[0] - sphere.x;
+    float vy = p->position[1] - sphere.y;
+    float vz = p->position[2] - sphere.z;
+    float distance;
+
+    if (p->alive == 0)
+        return;
+
+    distance = sqrt(vx * vx + vy * vy + vz * vz);
+
+    if (distance < sphere.radius)
+    {
+#if 0
+	vx /= distance;  vy /= distance;  vz /= distance;
+	d = 2*(-vx*p->velocity[0] + -vy*p->velocity[1] + -vz*p->velocity[2]);
+	p->velocity[0] += vx*d*2;
+	p->velocity[1] += vy*d*2;
+	p->velocity[2] += vz*d*2;
+	d = sqrt(p->velocity[0]*p->velocity[0] + 
+		 p->velocity[1]*p->velocity[1] +
+		 p->velocity[2]*p->velocity[2]);
+	p->velocity[0] /= d;
+	p->velocity[1] /= d;
+	p->velocity[2] /= d;
+#else
+        p->position[0] = sphere.x + (vx / distance) * sphere.radius;
+        p->position[1] = sphere.y + (vy / distance) * sphere.radius;
+        p->position[2] = sphere.z + (vz / distance) * sphere.radius;
+        p->previous[0] = p->position[0];
+        p->previous[1] = p->position[1];
+        p->previous[2] = p->position[2];
+        p->velocity[0] = vx / distance;
+        p->velocity[1] = vy / distance;
+        p->velocity[2] = vz / distance;
+#endif
+    }
+    if (distance < sphere2.radius)
+    {
+#if 0
+	vx /= distance;  vy /= distance;  vz /= distance;
+	d = 2*(-vx*p->velocity[0] + -vy*p->velocity[1] + -vz*p->velocity[2]);
+	p->velocity[0] += vx*d*2;
+	p->velocity[1] += vy*d*2;
+	p->velocity[2] += vz*d*2;
+	d = sqrt(p->velocity[0]*p->velocity[0] + 
+		 p->velocity[1]*p->velocity[1] +
+		 p->velocity[2]*p->velocity[2]);
+	p->velocity[0] /= d;
+	p->velocity[1] /= d;
+	p->velocity[2] /= d;
+#else
+        p->position[0] = sphere2.x + (vx / distance) * sphere2.radius;
+        p->position[1] = sphere2.y + (vy / distance) * sphere2.radius;
+        p->position[2] = sphere2.z + (vz / distance) * sphere2.radius;
+        p->previous[0] = p->position[0];
+        p->previous[1] = p->position[1];
+        p->previous[2] = p->position[2];
+        p->velocity[0] = vx / distance;
+        p->velocity[1] = vy / distance;
+        p->velocity[2] = vz / distance;
+#endif
+    }
+}
 
 void parseString(char *text)
 {
@@ -79,6 +342,33 @@ void parseString(char *text)
 
     // Libere la memoria
     regfree(&regex);
+}
+
+void reshape(int width, int height)
+{
+    float black[] = {0, 0, 0, 0};
+
+    glViewport(0, 0, width, height);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(60, 1, 0.1, 1000);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    gluLookAt(0, 1, 3, 0, 1, 0, 0, 1, 0);
+    glFogfv(GL_FOG_COLOR, black);
+    glFogf(GL_FOG_START, 2.5);
+    glFogf(GL_FOG_END, 4);
+    glEnable(GL_FOG);
+    glFogi(GL_FOG_MODE, GL_LINEAR);
+    glPointSize(point_size);
+    glEnable(GL_POINT_SMOOTH);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_COLOR_MATERIAL);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_LIGHT0);
+
+    timedelta();
 }
 
 // Rotacion XY y Zoom
@@ -147,6 +437,11 @@ void dibujaTexto(void *tipo, char *s, float x, float y)
 
 void dibuja(void)
 {
+    static int i;
+    static float c;
+    static char s[32];
+    static int frames = 0;
+
     // limpiar frame buffer y Z-buffer
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -160,9 +455,42 @@ void dibuja(void)
     if (ejes)
         creaEjes();
 
+    if (points)
+    {
+        glBegin(GL_POINTS);
+
+        for (i = 0; i < num_particles; i++)
+        {
+            if (particles[i].alive == 0)
+                continue;
+            c = particles[i].position[1] / 2.1 * 255;
+            glColor3ub((GLubyte)c, (GLubyte)(128 + c * 0.5), 255);
+            glVertex3f(particles[i].position[0], particles[i].position[1], particles[i].position[2]);
+            glVertex3f((-1) * particles[i].position[0], particles[i].position[1], particles[i].position[2]);
+        }
+        glEnd();
+    }
+    else
+    {
+        glBegin(GL_LINES);
+        for (i = 0; i < num_particles; i++)
+        {
+            if (particles[i].alive == 0)
+                continue;
+            c = particles[i].previous[1] / 2.1 * 255;
+            glColor3ub((GLubyte)c, (GLubyte)(128 + c * 0.5), 255);
+            glVertex3fv(particles[i].previous);
+            c = particles[i].position[1] / 2.1 * 255;
+            glColor3ub((GLubyte)c, (GLubyte)(128 + c * 0.5), 255);
+            glVertex3fv(particles[i].position);
+        }
+        glEnd();
+    }
+
     // Cuerpo
     glPushMatrix();
-    glTranslatef(0.0, 4.7 - cambia_r(1.3), 0.0);
+    posy_global = 2.1 - cambia_r(2.1);
+    glTranslatef(0.0, 6.7 - cambia_r(3.4), 0.0); // 4.7 - 1.3 = 3.4
 
     // Texto
     glPushMatrix();
@@ -231,10 +559,10 @@ void dibuja(void)
     float largo_antebrazo = 2.0;
     float tam_hombro = 0.7;
     float tam_muneca = 0.4;
-    float giro_x_brazo = cambia_r(100);
-    float giro_z_brazo = cambia_r(15);
-    float giro_x_codo = cambia_r(137);
-    float giro_z_codo = cambia_r(20);
+    float giro_x_brazo = cambia_r(10);
+    float giro_z_brazo = cambia_r(1);
+    float giro_x_codo = cambia_r(40);
+    float giro_z_codo = cambia_r(1);
     { // Brazo derecho
         glPushMatrix();
         // Posición inicial (brazo derecho)
@@ -357,7 +685,8 @@ void dibuja(void)
 
     { // Cabeza
         glPushMatrix();
-        glTranslatef(0.0, 5.85, 0.0);
+
+        glTranslatef(sphere.x, sphere.y, sphere.z);
 
         // Cabeza
         glPushMatrix();
@@ -366,10 +695,11 @@ void dibuja(void)
         float tam_cab_barba = 0.8;
         float dist_cab = 0.9;
         float dist_cab_ab = 0.5;
+        sphere.radius = pub_tam_cab_ar;
         glColor3fv(rojo);
         glPushMatrix();
         glScalef(1.0, 0.5, 1.0);
-        glutSolidSphere(tam_cab_ar, 20, 20);
+        glutSolidSphere(sphere.radius, 20, 20);
         glPopMatrix();
         glPushMatrix();
         glTranslatef(0.0, -1, 0.0);
@@ -377,9 +707,16 @@ void dibuja(void)
         gluCylinder(gluNewQuadric(), tam_cab_ab, tam_cab_ar, dist_cab, 20, 20);
         glPopMatrix();
         glPushMatrix();
-        glTranslatef(0.0, -dist_cab, 0.0);
+        pub_tam_cab_ar = tam_cab_ar;
+        pub_tam_cab_ab = tam_cab_ab;
+        pub_dist_cab = dist_cab;
+        sphere2.x = 0.0;
+        sphere2.y = -pub_dist_cab;
+        sphere2.z = 0.0;
+        sphere2.radius = pub_tam_cab_ab;
+        glTranslatef(sphere2.x, sphere2.y, sphere2.z);
         glScalef(1.0, 0.5, 1.0);
-        glutSolidSphere(tam_cab_ab, 20, 20);
+        glutSolidSphere(sphere2.radius, 20, 20);
         glPopMatrix();
         glPopMatrix();
 
@@ -624,7 +961,7 @@ void dibuja(void)
     float ancho_pierna_arriba = 0.7;
     float ancho_pierna_abajo = 0.6;
     float ancho_union_pie = 0.5;
-    float giro_z_pierna = cambia_r(10);
+    float giro_z_pierna = cambia_r(1);
     float giro_x_pierna = cambia_r(50);
     float giro_x_rodilla = cambia_r(95);
     float giro_x_tobillo = cambia_r(40);
@@ -635,7 +972,7 @@ void dibuja(void)
         // Giro en x (pierna derecha)
         glRotatef(-giro_x_pierna, 1, 0, 0);
         // Giro en z (pierna derecha)
-        glRotatef(-10 + giro_z_pierna, 0, 0, 1);
+        glRotatef(0, 0, 0, 1);
         // // Giro en y (pierna derecha)
         // glRotatef(0,0,1,0);
 
@@ -707,7 +1044,7 @@ void dibuja(void)
         // Giro en x
         glRotatef(-giro_x_pierna, 1, 0, 0);
         // Giro en z (pierna izquierda)
-        glRotatef(10 - giro_z_pierna, 0, 0, 1);
+        glRotatef(0, 0, 0, 1);
         // // Giro en y (pierna izquierda)
         // glRotatef(0,0,1,0);
 
@@ -799,11 +1136,12 @@ void anima(int v)
     // float gyroY; // controlar el giro en y
     // float gyroZ; // controla el giro en x
 
-    gyroY = -gyroY; // Arreglar posibles confusiones //! Acelerometro
+    // ! Regresar estas 3 lineas
+    // gyroY = -gyroY; // Arreglar posibles confusiones //! Acelerometro
 
     // Cambiar el rango desde -1->1 a -180->180
-    giray = gyroX * 90; //! Acelerometro
-    girax = gyroY * 90; //! Acelerometro
+    // giray = gyroX * 90; //! Acelerometro
+    // girax = gyroY * 90; //! Acelerometro
 
     if (iniciando)
     {
@@ -831,6 +1169,79 @@ void anima(int v)
     glutPostRedisplay();
 }
 
+void idleFunc(void)
+{
+    static int i;
+    static int living = 0; /* index to end of live particles */
+    static float dt;
+
+    dt = timedelta();
+    frame_time += dt;
+
+#if 1
+    /* slow the simulation if we can't keep the frame rate up around
+       10 fps */
+    if (dt > 0.1)
+    {
+        slow_down = 0.75;
+    }
+    else if (dt < 0.1)
+    {
+        slow_down = 1;
+    }
+#endif
+
+    dt *= slow_down;
+
+    /* resurrect a few particles */
+    for (i = 0; i < flow * dt; i++)
+    {
+        psNewParticle(&particles[living], dt, -0.8, posy_global);
+        living++;
+        if (living >= num_particles)
+            living = 0;
+    }
+
+    for (i = 0; i < num_particles; i++)
+    {
+        psTimeStep(&particles[i], dt);
+
+        /* collision with sphere? */
+        if (do_sphere)
+        {
+            psCollide(&particles[i]);
+        }
+
+        /* collision with ground? */
+        if (particles[i].position[1] <= 0)
+        {
+            psBounce(&particles[i], dt);
+        }
+
+        /* dead particle? */
+        if (particles[i].position[1] < 0.1 &&
+            fequal(particles[i].velocity[1], 0))
+        {
+            particles[i].alive = 0;
+        }
+    }
+
+    glutPostRedisplay();
+}
+
+void visible(int state)
+{
+    if (state == GLUT_VISIBLE)
+    {
+        timedelta();
+        glutIdleFunc(idleFunc);
+    }
+    else
+    {
+        glutIdleFunc(NULL);
+    }
+}
+
 // Funciones con Teclas normales
 void teclado(unsigned char key, int x, int y)
 {
@@ -844,6 +1255,40 @@ void teclado(unsigned char key, int x, int y)
     case 'e': // activa/desactiva los ejes
         ejes = !ejes;
         break;
+    case 'w':
+        type = PS_WATERFALL;
+        break;
+    case 'f':
+        type = PS_FOUNTAIN;
+        break;
+    case 's':
+        do_sphere = !do_sphere;
+        break;
+    case 'l':
+        points = !points;
+        break;
+    case 'P':
+        point_size++;
+        glPointSize(point_size);
+        break;
+    case 'p':
+        point_size--;
+        if (point_size < 1)
+            point_size = 1;
+        glPointSize(point_size);
+        break;
+    case '+':
+        flow += 100;
+        if (flow > num_particles)
+            flow = num_particles;
+        printf("%g particles/second\n", flow);
+        break;
+    case '-':
+        flow -= 100;
+        if (flow < 0)
+            flow = 0;
+        printf("%g particles/second\n", flow);
+        break;
     default:
         break;
     }
@@ -853,21 +1298,21 @@ void teclado(unsigned char key, int x, int y)
 // Funciones con Teclas Especiales
 void rotar(int key, int x, int y)
 {
-    // switch (key)
-    // {
-    // case GLUT_KEY_LEFT: // rotacion en el eje Y
-    //     giray -= 15;
-    //     break;
-    // case GLUT_KEY_RIGHT: // rotacion en el eje Y
-    //     giray += 15;
-    //     break;
-    // case GLUT_KEY_UP: // rotacion en el eje X
-    //     girax -= 15;
-    //     break;
-    // case GLUT_KEY_DOWN: // rotacion en el eje X
-    //     girax += 15;
-    //     break;
-    // }
+    switch (key)
+    {
+    case GLUT_KEY_LEFT: // rotacion en el eje Y
+        giray -= 15;
+        break;
+    case GLUT_KEY_RIGHT: // rotacion en el eje Y
+        giray += 15;
+        break;
+    case GLUT_KEY_UP: // rotacion en el eje X
+        girax -= 15;
+        break;
+    case GLUT_KEY_DOWN: // rotacion en el eje X
+        girax += 15;
+        break;
+    }
     glutPostRedisplay();
 }
 
@@ -887,6 +1332,8 @@ void ajusta(int ancho, int alto)
     glMatrixMode(GL_MODELVIEW); // matriz de modelado
     glLoadIdentity();           // matriz identidad
     glEnable(GL_DEPTH_TEST);    // activa el Z-buffer
+
+    timedelta();
 }
 
 int main(int argc, char **argv)
@@ -902,6 +1349,21 @@ int main(int argc, char **argv)
     glutKeyboardFunc(teclado);
     glutTimerFunc(1, anima, 0);
     glutSpecialFunc(rotar);
+    if (argc > 1)
+    {
+        if (strcmp(argv[1], "-h") == 0)
+        {
+            fprintf(stderr, "%s [particles] [flow] [speed%%]\n", argv[0]);
+            exit(0);
+        }
+        sscanf(argv[1], "%d", &num_particles);
+        if (argc > 2)
+            sscanf(argv[2], "%f", &flow);
+        if (argc > 3)
+            sscanf(argv[3], "%f", &slow_down);
+    }
+    particles = (PSparticle *)malloc(sizeof(PSparticle) * num_particles);
+    glutVisibilityFunc(visible);
     glutMainLoop(); // bucle de eventos de GLUT
     return 0;
 }

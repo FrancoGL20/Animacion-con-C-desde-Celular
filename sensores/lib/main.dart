@@ -18,9 +18,9 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   bool _accelAvailable = false;
-  bool _gyroAvailable = false;
+  // bool _gyroAvailable = false;
   List<double> _accelData = List.filled(3, 0.0);
-  List<double> _gyroData = List.filled(3, 0.0);
+  // List<double> _gyroData = List.filled(3, 0.0);
   StreamSubscription? _accelSubscription;
   StreamSubscription? _gyroSubscription;
   final StreamController<String> _dataStreamController =
@@ -29,7 +29,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     _checkAccelerometerStatus();
-    _checkGyroscopeStatus();
+    // _checkGyroscopeStatus();
     super.initState();
   }
 
@@ -71,16 +71,16 @@ class _MyAppState extends State<MyApp> {
     _accelSubscription = null;
   }
 
-  void _checkGyroscopeStatus() async {
-    await SensorManager().isSensorAvailable(Sensors.GYROSCOPE).then((result) {
-      setState(() {
-        _gyroAvailable = result;
-      });
-    });
-  }
+  // void _checkGyroscopeStatus() async {
+  //   await SensorManager().isSensorAvailable(Sensors.GYROSCOPE).then((result) {
+  //     setState(() {
+  //       _gyroAvailable = result;
+  //     });
+  //   });
+  // }
 
   void startSendingData() async {
-    final socket = await Socket.connect("10.104.76.78", 11510);
+    final socket = await Socket.connect("10.104.72.85", 11510);
     _dataStreamController.stream.listen((data) {
       socket.write({'data': data});
       socket.flush();
@@ -102,18 +102,18 @@ class _MyAppState extends State<MyApp> {
     _dataStreamController.close();
   }
 
-  Future<void> _startGyroscope() async {
-    if (_gyroSubscription != null) return;
-    if (_gyroAvailable) {
-      final stream =
-          await SensorManager().sensorUpdates(sensorId: Sensors.GYROSCOPE);
-      _gyroSubscription = stream.listen((sensorEvent) {
-        setState(() {
-          _gyroData = sensorEvent.data;
-        });
-      });
-    }
-  }
+  // Future<void> _startGyroscope() async {
+  //   if (_gyroSubscription != null) return;
+  //   if (_gyroAvailable) {
+  //     final stream =
+  //         await SensorManager().sensorUpdates(sensorId: Sensors.GYROSCOPE);
+  //     _gyroSubscription = stream.listen((sensorEvent) {
+  //       setState(() {
+  //         _gyroData = sensorEvent.data;
+  //       });
+  //     });
+  //   }
+  // }
 
   void _stopGyroscope() {
     if (_gyroSubscription == null) return;
